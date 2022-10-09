@@ -1,6 +1,6 @@
 # Uses the `dog` command in coordination with the `birthday` command
 > dog Scruffy poodle 1
-Woof! My name is Scruffy and I am a poodle! I am 1 years old! Woof!             
+Woof! My name is Scruffy and I am a poodle! I am 1 ears old! Woof!
 <<<
 > birthday Scruffy
 Woof! My name is Scruffy and I am a poodle! I am 2 years old! Woof!             
