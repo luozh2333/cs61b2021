@@ -10,7 +10,7 @@ public class BlobControl {
     public static void addBlob(String name, StagingArea SA, Commit thisCommit) {
         File toBeAdd = join(Repository.CWD, name);
         if(!toBeAdd.exists()){
-            throw error("File does not exist.");
+             Utils.exit("File does not exist.");
         }
         byte[] content = readContents(toBeAdd);
         String BlobName = sha1(content);
@@ -19,9 +19,11 @@ public class BlobControl {
         staging area if it is already there */
         if (thisCommit.GetReferenceID(name) != null &&
                 thisCommit.GetReferenceID(name).equals(BlobName)) {
-                SA.removeAddition(name);
+                SA.removeAddition(name);//remove addition area
+                SA.removeRemove(name);//remove removal area
                 return;
         }
+
         /*if StagingArea have the same then do nothing,otherwise add it*/
         String GetID = SA.GetAdditionId(name);
         if (GetID != null && GetID.equals(BlobName)) {
@@ -40,6 +42,5 @@ public class BlobControl {
         }
         return null;
     }
-
 
 }

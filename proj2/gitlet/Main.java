@@ -13,7 +13,7 @@ public class Main {
      */
     public static void main(String[] args) {
         if (args.length == 0) {
-            Utils.error("Must have at least one argument");
+            Utils.exit("Must have at least one argument");
         }
         String firstArg = args[0];
         switch (firstArg) {
@@ -49,15 +49,19 @@ public class Main {
                 if (args.length == 3) {
                     if (args[1].equals("--")) {
                         Repository.Checkout1(args[2]);
+                    } else {
+                        Utils.exit("Incorrect operands.");
                     }
                 } else if (args.length == 4) {
                     if (args[2].equals("--")) {
                         Repository.Checkout2(args[1], args[3]);
+                    } else {
+                        Utils.exit("Incorrect operands.");
                     }
                 } else if (args.length == 2) {
                     Repository.Checkout3(args[1]);
                 } else {
-                    throw Utils.error("Invalid number of arguments");
+                    Utils.exit("Incorrect operands.");
                 }
                 break;
             }
@@ -76,16 +80,25 @@ public class Main {
             case "reset":
                 validateNumArgs("reset", args, 2);
                 Repository.reset(args[1]);
+                break;
             case "merge":
-                validateNumArgs("merge",args,2);
+                validateNumArgs("merge", args, 2);
                 Repository.merge(args[1]);
                 break;
+            default:
+                Utils.exit("No command with that name exists.");
         }
     }
 
     public static void validateNumArgs(String cmd, String[] args, int n) {
         if (args.length != n) {
-            throw Utils.error(String.format("Invalid number of arguments for: %s.", cmd));
+            Utils.exit("Incorrect operands.");
+        }
+        if(!cmd.equals("init")){
+            if(!Repository.GITLET_DIR.exists()){
+                Utils.exit("Not in an initialized Gitlet directory.");
+            }
+
         }
     }
 }

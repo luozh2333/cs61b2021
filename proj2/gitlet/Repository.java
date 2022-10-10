@@ -1,4 +1,5 @@
 package gitlet;
+
 import java.io.File;
 
 import static gitlet.Utils.*;
@@ -45,6 +46,9 @@ public class Repository {
     /*make dir and init all the object: created first commit, let head point to it ,
        init staging area(created object and toFile )*/
     public static void init() {
+        if (GITLET_DIR.exists()) {
+            Utils.exit("A Gitlet version-control system already exists in the current directory.");
+        }
         GITLET_DIR.mkdir();
         Commit.COMMIT_FOLDER.mkdir();
         BlobControl.BLOB_DIR.mkdir();
@@ -66,9 +70,12 @@ public class Repository {
     /*update commit from parent and StagingArea then clean up StagingArea,
      and modify head to point to this new one*/
     public static void ToCommit(String info) {
+        if (info.isEmpty()) {
+            Utils.exit("Please enter a commit message.");
+        }
         Repository.LoadAll();
-        if (SA.IsAdditionEmpty()) {
-            System.out.println("No changes added to the commit.");
+        if (SA.IsAdditionEmpty() && SA.IsRemoveEmpty()) {
+            Utils.exit("No changes added to the commit.");
         }
         Commit newCommit = new Commit(info, HeadHashCode);
         HeadHashCode = Commit.SetReference(newCommit, SA);//update commit
@@ -81,7 +88,7 @@ public class Repository {
         File thisFile = join(CWD, name);
         String FileID = thisCommit.GetReferenceID(name);
         if (FileID == null && SA.GetAdditionId(name) == null) {
-            throw error("No reason to remove the file.");
+            Utils.exit("No reason to remove the file.");
         }
         /*Unstage the file if it is currently staged for addition*/
         SA.removeAddition(name);
@@ -99,7 +106,7 @@ public class Repository {
         Repository.LoadAll();
         File NewBranch = join(RefsControl.REFS_DIR, BranchName);
         if (NewBranch.exists()) {
-            throw error("A branch with that name already exists.");
+            Utils.exit("A branch with that name already exists.");
         }
         RefsControl.storeHead(Commit.Sha1Commit(thisCommit), BranchName);
     }
@@ -107,11 +114,11 @@ public class Repository {
     public static void rmBranch(String BranchName) {
         Repository.LoadAll();
         if (CurrentBranch.equals(BranchName)) {
-            throw error("Cannot remove the current branch.");
+            Utils.exit("Cannot remove the current branch.");
         }
         File Branch = join(RefsControl.REFS_DIR, BranchName);
         if (!Branch.exists()) {
-            throw error("branch with that name does not exist.");
+            Utils.exit("branch with that name does not exist.");
         }
         Branch.delete();
     }
@@ -120,7 +127,7 @@ public class Repository {
         Repository.LoadAll();
         File FileCommitted = BlobControl.returnBlob(Filename, thisCommit);
         if (FileCommitted == null) {
-            throw error("not exist in that commit.");
+            Utils.exit("File does not exist in that commit.");
         }
         File ToCheckout = join(CWD, Filename);
         Utils.writeContents(ToCheckout, (Object) Utils.readContents(FileCommitted));
@@ -130,11 +137,11 @@ public class Repository {
         Repository.LoadAll();
         Commit theCommit = Commit.fromFile(CommitID);
         if (theCommit == null) {
-            throw error("No commit with that id exists.");
+            Utils.exit("No commit with that id exists.");
         }
         File FileCommitted = BlobControl.returnBlob(Filename, theCommit);
         if (FileCommitted == null) {
-            throw error("not exist in that commit.");
+            Utils.exit("File does not exist in that commit.");
         }
         File ToCheckout = join(CWD, Filename);
         Utils.writeContents(ToCheckout, (Object) Utils.readContents(FileCommitted));
@@ -145,14 +152,14 @@ public class Repository {
         File ToBranch = join(RefsControl.REFS_DIR, BranchName);
         /*if there no this branch exist*/
         if (!ToBranch.exists()) {
-            throw error("No such branch exists.");
+            Utils.exit("No such branch exists.");
         }
         if (BranchName.equals(CurrentBranch)) {
-            throw error("No need to checkout the current branch.");
+            Utils.exit("No need to checkout the current branch.");
         }
         /*if the currentCommit have untrackedFile */
         if (!FileStatusCheck.UntrackedFileNameReturn(SA, thisCommit).isEmpty()) {
-            throw error("There is an untracked file in the way; delete it, or add and commit it first.");
+            Utils.exit("There is an untracked file in the way; delete it, or add and commit it first.");
         }
         CurrentBranch = BranchName;
         Commit checkoutCommit = Commit.fromFile(RefsControl.returnHead(CurrentBranch));
@@ -208,15 +215,15 @@ public class Repository {
         Repository.LoadAll();
         String DirectoryName = String.copyValueOf(HeadHashCode.toCharArray(), 0, 6);
         if (CommitId.equals(DirectoryName) || CommitId.equals(HeadHashCode)) {
-            throw Utils.error("no need to reset, now in that commit");
+            Utils.exit("no need to reset, now in that commit");
         }
         /*if the currentCommit have untrackedFile */
         if (!FileStatusCheck.UntrackedFileNameReturn(SA, thisCommit).isEmpty()) {
-            throw error("There is an untracked file in the way; delete it, or add and commit it first.");
+            Utils.exit("There is an untracked file in the way; delete it, or add and commit it first.");
         }
         Commit theCommit = Commit.fromFile(CommitId);
         if (theCommit == null) {
-            throw error("No commit with that id exists.");
+            Utils.exit("No commit with that id exists.");
         }
         /*delete previous CWD file and set checkout's CommitFile to CWD*/
         Commit.SetCommitFile(theCommit);
@@ -226,28 +233,34 @@ public class Repository {
     }
 
     private static String FindSplitPoint(Commit CommitTwo) {
-        ArrayList<String> Path1 = new ArrayList<>();
-        ArrayList<String> Path2 = new ArrayList<>();
-        Commit flag = thisCommit;
-        Path1.add(Commit.Sha1Commit(flag));
-        while (!flag.GetParent().equals("null")) {
-            Path1.add(flag.GetParent());
-            flag = Commit.fromFile(flag.GetParent());
-        }
-        flag = CommitTwo;
-        Path2.add(Commit.Sha1Commit(CommitTwo));
-        while (!flag.GetParent().equals("null")) {
-            Path2.add(flag.GetParent());
-            flag = Commit.fromFile(flag.GetParent());
-        }
-        int i = 1;
-        while (Path1.get(Path1.size() - i).equals(Path2.get(Path2.size() - i))) {
-            i++;
-            if(Path1.size() - i <0 || Path2.size() - i < 0){
-                break;
+        Comparator<Commit> commitComparator = Comparator.comparing(Commit::GetTime).reversed();
+        Queue<Commit> commitsQueue = new PriorityQueue<>(commitComparator);
+        commitsQueue.add(thisCommit);
+        commitsQueue.add(CommitTwo);
+        Set<String> checkedCommitIds = new HashSet<>();
+        while (!commitsQueue.isEmpty()) {
+            Commit flag = commitsQueue.poll();
+            String firstParent = flag.GetParent();
+            String SecondParent = flag.GetSecondParent();
+            if (firstParent.equals("null")) {
+                return Commit.Sha1Commit(flag);//init commit
+            }
+            if (checkedCommitIds.contains(firstParent)) {
+                return firstParent;
+            } else {
+                checkedCommitIds.add(firstParent);
+                commitsQueue.add(Commit.fromFile(firstParent));
+            }
+            if (SecondParent != null) {
+                if (checkedCommitIds.contains(SecondParent)) {
+                    return SecondParent;
+                } else {
+                    checkedCommitIds.add(SecondParent);
+                    commitsQueue.add(Commit.fromFile(SecondParent));
+                }
             }
         }
-        return Path1.get(Path1.size() - i + 1);
+        return null;
     }
 
     public static void merge(String branchTwo) {
@@ -286,20 +299,20 @@ public class Repository {
         LoadAll();
         /*Cannot merge a branch with itself.*/
         if (branchTwo.equals(CurrentBranch)) {
-            throw Utils.error("Cannot merge a branch with itself.");
+            Utils.exit("Cannot merge a branch with itself.");
         }
         /*there are staged additions or removals present*/
         if (!SA.IsAdditionEmpty() || !SA.IsRemoveEmpty()) {
-            throw Utils.error("You have uncommitted changes.");
+            Utils.exit("You have uncommitted changes.");
         }
         File ToBranch = join(RefsControl.REFS_DIR, branchTwo);
         /*if there no this branch exist*/
         if (!ToBranch.exists()) {
-            throw error("No such branch exists.");
+            Utils.exit("No such branch exists.");
         }
         /*There is an untracked file in the way; delete it, or add and commit it first.*/
         if (!FileStatusCheck.UntrackedFileNameReturn(SA, thisCommit).isEmpty()) {
-            throw error("There is an untracked file in the way; delete it, or add and commit it first.");
+            Utils.exit("There is an untracked file in the way; delete it, or add and commit it first.");
         }
         return Commit.fromFile(Utils.readContentsAsString(ToBranch));
     }
@@ -360,7 +373,7 @@ public class Repository {
             File f1 = join(BlobControl.BLOB_DIR, ID1);
             st.append(Utils.readContentsAsString(f1));
         }
-        st.append("=======\n");
+        st.append("\n=======\n");
         if (ID2 != null) {
             File f2 = join(BlobControl.BLOB_DIR, ID2);
             st.append(Utils.readContentsAsString(f2));
@@ -380,8 +393,8 @@ public class Repository {
                 System.out.println("===");
                 System.out.println("commit " + Commit.Sha1Commit(flag));
                 System.out.println("Merge: " +
-                                    String.copyValueOf(flag.GetParent().toCharArray(), 0, 7)+ " "
-                                    + String.copyValueOf(flag.GetSecondParent().toCharArray(), 0, 7));
+                        String.copyValueOf(flag.GetParent().toCharArray(), 0, 7) + " "
+                        + String.copyValueOf(flag.GetSecondParent().toCharArray(), 0, 7));
                 System.out.println("Date: " + flag.GetFormatTime());
                 System.out.println(flag.GetMassage());
                 System.out.println();
@@ -406,7 +419,7 @@ public class Repository {
                 System.out.println("===");
                 System.out.println("commit " + Commit.Sha1Commit(flag));
                 System.out.println("Merge: " +
-                        String.copyValueOf(flag.GetParent().toCharArray(), 0, 7)+ " "
+                        String.copyValueOf(flag.GetParent().toCharArray(), 0, 7) + " "
                         + String.copyValueOf(flag.GetSecondParent().toCharArray(), 0, 7));
                 System.out.println("Date: " + flag.GetFormatTime());
                 System.out.println(flag.GetMassage());
@@ -423,9 +436,9 @@ public class Repository {
 
     public static void find(String CommitMassage) {
         Commit flag;
-        for (String fileName : Objects.requireNonNull(Utils.plainFilenamesIn(Commit.COMMIT_FOLDER))) {
+        for (String fileName : Objects.requireNonNull(Commit.COMMIT_FOLDER.list())) {
             flag = Commit.fromFile(fileName);
-            if(flag.GetMassage().equals(CommitMassage)){
+            if (flag.GetMassage().equals(CommitMassage)) {
                 System.out.println(fileName);
             }
         }
