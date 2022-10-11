@@ -1,4 +1,5 @@
 package gitlet;
+
 import java.io.File;
 import java.io.Serializable;
 import java.text.DateFormat;
@@ -41,7 +42,8 @@ public class Commit implements Serializable {
             this.timestamp = new Date();
         }
     }
-    public Commit(String message, String parent, String secondParent){
+
+    public Commit(String message, String parent, String secondParent) {
         this.message = message;
         this.parent = parent;
         this.SecondParent = secondParent;
@@ -55,7 +57,8 @@ public class Commit implements Serializable {
     public Date GetTime() {
         return this.timestamp;
     }
-    public String GetFormatTime(){
+
+    public String GetFormatTime() {
         DateFormat dateFormat = new SimpleDateFormat("EEE MMM d HH:mm:ss yyyy Z", Locale.ENGLISH);
         return dateFormat.format(this.timestamp);
     }
@@ -89,7 +92,8 @@ public class Commit implements Serializable {
         String HashCommitToReturn = toFile(toCommit);
         return HashCommitToReturn;
     }
-    public  void SetReference(HashMap<String,String> hashMap){
+
+    public void SetReference(HashMap<String, String> hashMap) {
         this.reference = hashMap;
     }
 
@@ -117,7 +121,8 @@ public class Commit implements Serializable {
         Utils.writeObject(CreatedFile, newCommit);
         return HashCommit;
     }
-    public HashMap<String,String> GetReference(){
+
+    public HashMap<String, String> GetReference() {
         return this.reference;
     }
 
@@ -142,7 +147,7 @@ public class Commit implements Serializable {
 
     @Override
     public boolean equals(Object obj) {
-        if(obj == null){
+        if (obj == null) {
             return false;
         }
         if (this == obj) {
@@ -156,7 +161,9 @@ public class Commit implements Serializable {
                 this.timestamp.toString().equals(c.timestamp.toString());
     }
 
-    public String GetSecondParent(){return this.SecondParent;}
+    public String GetSecondParent() {
+        return this.SecondParent;
+    }
 
 
 }

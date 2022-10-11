@@ -1,9 +1,11 @@
 package gitlet;
 
+
 import java.io.File;
 
 import static gitlet.Utils.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -238,6 +240,8 @@ public class Repository {
         commitsQueue.add(thisCommit);
         commitsQueue.add(CommitTwo);
         Set<String> checkedCommitIds = new HashSet<>();
+        checkedCommitIds.add(Commit.Sha1Commit(thisCommit));
+        checkedCommitIds.add(Commit.Sha1Commit(CommitTwo));
         while (!commitsQueue.isEmpty()) {
             Commit flag = commitsQueue.poll();
             String firstParent = flag.GetParent();
@@ -308,7 +312,7 @@ public class Repository {
         File ToBranch = join(RefsControl.REFS_DIR, branchTwo);
         /*if there no this branch exist*/
         if (!ToBranch.exists()) {
-            Utils.exit("No such branch exists.");
+            Utils.exit("A branch with that name does not exist.");
         }
         /*There is an untracked file in the way; delete it, or add and commit it first.*/
         if (!FileStatusCheck.UntrackedFileNameReturn(SA, thisCommit).isEmpty()) {
@@ -368,15 +372,15 @@ public class Repository {
     /*give two different blobs and merge them then add to blobFile*/
     private static String mergeTwoFile(String ID1, String ID2) {
         StringBuilder st = new StringBuilder();
-        st.append("<<<<<<< HEAD\n");
+        st.append("<<<<<<< HEAD").append("\n");
         if (ID1 != null) {
             File f1 = join(BlobControl.BLOB_DIR, ID1);
-            st.append(Utils.readContentsAsString(f1));
+            st.append(new String(Utils.readContents(f1), StandardCharsets.UTF_8));
         }
-        st.append("\n=======\n");
+        st.append("=======").append("\n");
         if (ID2 != null) {
             File f2 = join(BlobControl.BLOB_DIR, ID2);
-            st.append(Utils.readContentsAsString(f2));
+            st.append(new String(Utils.readContents(f2), StandardCharsets.UTF_8));
         }
         st.append(">>>>>>>");
         String returnID = Utils.sha1(st.toString());
@@ -436,11 +440,16 @@ public class Repository {
 
     public static void find(String CommitMassage) {
         Commit flag;
+        boolean found = false;
         for (String fileName : Objects.requireNonNull(Commit.COMMIT_FOLDER.list())) {
             flag = Commit.fromFile(fileName);
             if (flag.GetMassage().equals(CommitMassage)) {
-                System.out.println(fileName);
+                System.out.println(Commit.Sha1Commit(flag));
+                found = true;
             }
+        }
+        if (!found) {
+            Utils.exit("Found no commit with that message.");
         }
     }
 }

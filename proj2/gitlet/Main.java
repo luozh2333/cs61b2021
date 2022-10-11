@@ -13,7 +13,7 @@ public class Main {
      */
     public static void main(String[] args) {
         if (args.length == 0) {
-            Utils.exit("Must have at least one argument");
+            Utils.exit("Please enter a command.");
         }
         String firstArg = args[0];
         switch (firstArg) {
@@ -94,8 +94,8 @@ public class Main {
         if (args.length != n) {
             Utils.exit("Incorrect operands.");
         }
-        if(!cmd.equals("init")){
-            if(!Repository.GITLET_DIR.exists()){
+        if (!cmd.equals("init")) {
+            if (!Repository.GITLET_DIR.exists()) {
                 Utils.exit("Not in an initialized Gitlet directory.");
             }
 
