@@ -375,14 +375,14 @@ public class Repository {
         st.append("<<<<<<< HEAD").append("\n");
         if (ID1 != null) {
             File f1 = join(BlobControl.BLOB_DIR, ID1);
-            st.append(new String(Utils.readContents(f1), StandardCharsets.UTF_8));
+            st.append(new String(Utils.readContents(f1), StandardCharsets.UTF_8)).append("\n");
         }
         st.append("=======").append("\n");
         if (ID2 != null) {
             File f2 = join(BlobControl.BLOB_DIR, ID2);
-            st.append(new String(Utils.readContents(f2), StandardCharsets.UTF_8));
+            st.append(new String(Utils.readContents(f2), StandardCharsets.UTF_8)).append("\n");
         }
-        st.append(">>>>>>>");
+        st.append(">>>>>>>").append("\n");
         String returnID = Utils.sha1(st.toString());
         File newBlob = join(BlobControl.BLOB_DIR, returnID);
         Utils.writeContents(newBlob, st.toString());
